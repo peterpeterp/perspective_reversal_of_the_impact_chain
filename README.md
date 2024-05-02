@@ -9,6 +9,7 @@ Run example_2_preparation.ipynb to estimate quantiles for each GMT level.
 Run example_2.ipynb to estimate CO2 budgets for different risk levels.
 
 ## Example 3: Glacier retreat in Asian high mountaneous regions
+Run example_3_preparation.ipynb to run the LOWESS fit.
 Run example_3.ipynb to estimate CO2 budgets for different risk levels.
 
 *Please contact me if you have questions and need more comments / explanation!*
