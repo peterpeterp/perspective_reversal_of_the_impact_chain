@@ -12,8 +12,6 @@ import matplotlib.pyplot as plt
 import SBCK
 
 import cartopy
-sys.path.append('/home/u/u290372/scripts/')
-from cartopy_features import *
 
 import _paths as _paths; importlib.reload(_paths)
 
@@ -71,7 +69,7 @@ class oneRun():
                 self.__dict__[k] = v
 
         
-    def get_files(self, data_paths = ['/work/uc1275/u290372/CMIP6/data/','/pool/data/CMIP6/data/']):            
+    def get_files(self, data_paths = ['???','???']):            
         SMRs = []
         self._hist_files, self._ssp585_files = [],[]
         if self._source == 'CMIP6':
@@ -105,80 +103,15 @@ class oneRun():
 
                 SMRs += ['_'.join([fl.split('/')[i] for i in [-7,-8,-6]]) for fl in self._scen_files]
 
-            if self._indicator in ['rx1dayETCCDI','txxETCCDI','tnnETCCDI']:
-                self._scen_files = glob.glob('/work/uc1275/u290372/data/etccdi_indices_*/'+self._indicator+'_mon_'+self._model+'_'+self._scenario+'_'+self._run+'_*.nc')
-                if 'ssp' in self._scenario:
-                    self._hist_files = glob.glob('/work/uc1275/u290372/data/etccdi_indices_*/'+ self._indicator+ '_mon_'+ self._model+ '_'+'historical'+'_'+self._run+'_*.nc')
-                    self._ssp585_files = glob.glob('/work/uc1275/u290372/data/etccdi_indices_*/'+ self._indicator+ '_mon_'+ self._model+'_'+'ssp585'+'_'+self._run+'_*.nc')
-                SMRs += ['_'.join([fl.split('/')[-1].split('_')[i] for i in [3,2,4]]) for fl in self._scen_files 
-                               if len(fl.split('_')) > 4]
-
-            if self._indicator in ['cddETCCDI']:
-                self._scen_files = glob.glob('/work/uc1275/u290372/data/etccdi_indices_*/' +self._indicator+'_yr_'+self._model+'_'+self._scenario+'_'+self._run+'_*.nc')
-                self._hist_files = glob.glob('/work/uc1275/u290372/data/etccdi_indices_*/' +self._indicator+'_yr_'+self._model+'_'+'historical'+'_'+self._run+'_*.nc')
-                self._ssp585_files = glob.glob('/work/uc1275/u290372/data/etccdi_indices_*/' +self._indicator+'_yr_'+self._model+'_'+'ssp585'+'_'+self._run+'_*.nc')
-                SMRs += ['_'.join([fl.split('/')[-1].split('_')[i] for i in [3,2,4]]) for fl in self._scen_files 
-                               if len(fl.split('_')) > 4]
-
-        if self._source == 'mesmer':
-            self._scen_files = glob.glob('/work/uc1275/u290372/data/mesmer/%s/%s/%s_mon_%s_%s_%s_g025.nc' \
-                                         %(self._model, self._scenario, self._indicator, self._model, self._scenario, self._run))
-            self._hist_files = glob.glob('/work/uc1275/u290372/data/mesmer/%s/%s/%s_mon_%s_%s_%s_g025.nc' \
-                                         %(self._model, 'historical', self._indicator, self._model, 'historical', self._run))
-            SMRs += ['_'.join([fl.split('/')[-1].split('_')[i] for i in [3,2,4]]) for fl in self._scen_files 
-                               if len(fl.split('_')) > 4]
-            
         return SMRs
-
-    def regrid(self, var, fl):
-        asd
-        return var
 
     def treat_data(self, var, fl):
         # this is the main preprocessing
         # it has to be in a separate function because it is applied to each subfile
-        if self._level is not None:
-            for levName in ['lev','plev']:
-                if levName in var.dims:
-                    if self._verbose: print(levName,var[levName].attrs)
-                    unit = var[levName].attrs['units']
-                    if 'Pa' in unit:
-                        if unit == 'hPa':
-                            self._level /= 100
-                        if self._verbose: print('available pressure levels in ',unit, var[levName].values)
-                        var = var.sel({levName:self._level}, method='nearest')
-                        if self._verbose: print('used pressure levels in ',unit, var[levName].values)
-                    else:
-                        return None
-                else:
-                    if self._verbose: print(var.dims)
-        
-        if self._regrid:
-            if self._verbose: print('regridding')
-            ds_regrid = xr.Dataset({
-                'lon': (['lon'], np.arange(self._extent[0],self._extent[1]+self._regrid_prec, self._regrid_prec,'int')),
-                'lat': (['lat'], np.arange(self._extent[2],self._extent[3]+self._regrid_prec, self._regrid_prec,'int')),})
-            filename='/work/uc1275/u290372/data/regriding_weights/%s_%s_%s.nc' \
-                                             %(self._model,self._realm,'x'.join([str(i) for i in self._extent]))            
-            if os.path.isfile(filename) and self._overwrite == False:
-                regridder = xe.Regridder(var, ds_regrid, 'bilinear', ignore_degenerate=True, periodic=True, weights=filename)
-            else:
-                regridder = xe.Regridder(var, ds_regrid, 'bilinear', ignore_degenerate=True, periodic=True)
-                regridder.to_netcdf(filename)
-            var = regridder(var).compute()
-        
+
         if 'lat' not in var.dims and 'latitude' in var.dims:
             var = var.rename(dict(latitude='lat', longitude='lon'))
-        if 'lat' not in var.dims and self._indicator != 'tas':
-            if self._verbose: print('regridding')
-            fls_tas = glob.glob('/'.join(fl.split('/')[:-5]) + '/' + '/'.join(['Amon','tas','*','*','*']))
-            if len(fls_tas) > 0:
-                nc_tas = xr.open_dataset(fls_tas[0])
-                ds_regrid = xr.Dataset({
-                    'lon': (['lon'], nc_tas.lon.values),'lat': (['lat'], nc_tas.lat.values),})
-                regridder = xe.Regridder(var, ds_regrid, 'bilinear', ignore_degenerate=True, periodic=True,
-                                         filename='/work/uc1275/u290372/data/regriding_weights/%s_%s.nc' %(self._model,self._realm))
-                var = regridder(var).compute()
+
         if 'lat' not in var.dims:
             if self._verbose: print('no lat')
             return None
@@ -187,33 +120,6 @@ class oneRun():
             var = var.sel(self._closest_grid, method='nearest')
             var = var.squeeze()
         
-        if self._extent is not None and self._regrid==False:
-            mask_lon = (var.lon >= self._extent[0]) & (var.lon <= self._extent[1])
-            mask_lat = (var.lat >= self._extent[2]) & (var.lat <= self._extent[3])
-            var = var.where(mask_lon & mask_lat, drop=True)
-            
-        if self._shape_for_mask is not None:
-            mask = regionmask.mask_geopandas(self._shape_for_mask, var)
-            mask.values[np.isfinite(mask.values)] = 1 
-            iys,ixs = np.where(mask == 1)
-            var.values = var.values * mask.values
-            var = var.isel(lat=np.unique(iys)).isel(lon=np.unique(ixs))
-            
-        if self._mask is not None:
-            mask = xr.load_dataset(self._mask_search_path %(self._model))[self._region_name]
-            #print(len(mask.lat) != len(var.lat) or len(mask.lon) != len(var.lon))
-            if len(mask.lat) != len(var.lat) or len(mask.lon) != len(var.lon):
-                var = self.regrid(var,fl)
-            mask.values[mask.values > 0] = 1
-            mask.values[mask.values < 1] = np.nan
-            iys,ixs = np.where(mask == 1)
-            var.values = var.values * mask.values
-            var = var.isel(lat=np.unique(iys)).isel(lon=np.unique(ixs))
-            # for most models the folliwing lines worked just fine
-            # for MPI not, no idea why
-            # var = var.where(mask > 0, drop=True)
-            
-            
         # subselect months
         if self._months is not None:
             month_mask = np.isin(var.time.dt.month, self._months)
