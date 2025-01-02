@@ -3,17 +3,15 @@ import xarray as xr
 import xesmf as xe
 import numpy as np
 import pandas as pd
-import _pre_oneRun as _pre_oneRun; importlib.reload(_pre_oneRun); from _pre_oneRun import oneRun
 
 import matplotlib
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-import SBCK
+# https://github.com/yrobink/SBCK
+import SBCK 
 
 import cartopy
-
-import _paths as _paths; importlib.reload(_paths)
 
 def relDiff(val,ref):
     return (val - ref) / ref * 100
